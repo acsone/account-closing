@@ -4,8 +4,8 @@
 
 
 import time
-from openerp.tools import float_compare
-from openerp.tests.common import TransactionCase
+from odoo.tools import float_compare
+from odoo.tests.common import TransactionCase
 
 
 class TestInvoiceStartEndDates(TransactionCase):

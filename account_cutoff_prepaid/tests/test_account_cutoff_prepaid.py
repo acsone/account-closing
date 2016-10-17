@@ -6,8 +6,8 @@
 
 
 import time
-from openerp import fields
-from openerp.tests.common import TransactionCase
+from odoo import fields
+from odoo.tests.common import TransactionCase
 
 
 class TestCutoffPrepaid(TransactionCase):
