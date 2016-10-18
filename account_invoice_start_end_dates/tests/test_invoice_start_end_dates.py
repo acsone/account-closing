@@ -80,7 +80,7 @@ class TestInvoiceStartEndDates(TransactionCase):
                     }),
                 ],
         })
-        invoice.signal_workflow('invoice_open')
+        invoice.action_invoice_open()
         self.assertTrue(invoice.move_id)
         iline_res = {
             (self._date('01-01'), self._date('12-31')): 2520,

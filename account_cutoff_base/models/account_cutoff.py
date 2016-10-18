@@ -14,7 +14,7 @@ class AccountCutoff(models.Model):
     _description = 'Account Cut-off'
 
     @api.multi
-    @api.depends('line_ids')
+    @api.depends('line_ids', 'line_ids.cutoff_amount')
     def _compute_total_cutoff(self):
         for cutoff in self:
             tamount = 0.0

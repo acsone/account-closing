@@ -60,7 +60,7 @@ class TestCutoffPrepaid(TransactionCase):
                 'end_date': self._date(end_date),
             })],
         })
-        invoice.signal_workflow('invoice_open')
+        invoice.action_invoice_open()
         self.assertEqual(amount, invoice.amount_untaxed)
         return invoice
 
@@ -79,8 +79,8 @@ class TestCutoffPrepaid(TransactionCase):
         amount = self._days('04-01', '06-30')
         amount_2months = self._days('05-01', '06-30')
         # invoice to be spread of 3 months
-        self._create_invoice('01-15', amount,
-                             start_date='04-01', end_date='06-30')
+        inv = self._create_invoice('01-15', amount,
+                                   start_date='04-01', end_date='06-30')
         # cutoff after one month of invoice period -> 2 months cutoff
         cutoff = self._create_cutoff('04-30')
         cutoff.get_prepaid_lines()
