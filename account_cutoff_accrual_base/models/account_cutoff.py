@@ -25,12 +25,12 @@ from openerp import api, fields, models
 import openerp.addons.decimal_precision as dp
 
 
-class AccountCutOff(models.Model):
+class AccountCutoff(models.Model):
     _inherit = 'account.cutoff'
 
     @api.model
     def _inherit_default_cutoff_account_id(self):
-        account_id = super(AccountCutOff,
+        account_id = super(AccountCutoff,
                            self)._inherit_default_cutoff_account_id()
         type = self.env.context.get('type')
         company = self.env.user.company_id
@@ -42,7 +42,7 @@ class AccountCutOff(models.Model):
 
     @api.model
     def _get_default_journal(self):
-        journal_id = super(AccountCutOff, self)\
+        journal_id = super(AccountCutoff, self)\
             ._get_default_journal()
         cutoff_type = self.env.context.get('type', False)
         default_journal_id = self.env.user.company_id\
