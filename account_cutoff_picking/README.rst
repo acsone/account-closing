@@ -1,5 +1,5 @@
 =======================
-Account Cut-off Picking
+Account Accrual Picking
 =======================
 
 .. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -19,37 +19,32 @@ Account Cut-off Picking
 .. |badge4| image:: https://img.shields.io/badge/weblate-Translate%20me-F47D42.png
     :target: https://translation.odoo-community.org/projects/account-closing-16-0/account-closing-16-0-account_cutoff_picking
     :alt: Translate me on Weblate
-.. |badge5| image:: https://img.shields.io/badge/runbot-Try%20me-875A7B.png
-    :target: https://runbot.odoo-community.org/runbot/89/16.0
-    :alt: Try me on Runbot
+.. |badge5| image:: https://img.shields.io/badge/runboat-Try%20me-875A7B.png
+    :target: https://runboat.odoo-community.org/webui/builds.html?repo=OCA/account-closing&target_branch=16.0
+    :alt: Try me on Runboat
 
 |badge1| |badge2| |badge3| |badge4| |badge5| 
 
-This module generates expense/revenue accruals and prepaid expense/revenue based on the status of orders, pickings and invoices. The module is named *account_cutoff_accrual_picking* because it initially only supported accruals ; support for prepaid expense/revenue was added later (it should be renamed in later versions).
+This module extends the functionality of account_cutoff_accrual_base
+to allow the calculation of expense and revenue accruals on sale order and
+purchase order.
+His name is a little misleading because following model changes in
+v10 of Odoo it now bases its calculation not on stock picking anymore but
+on sale and purchase order.
 
-To understand the behavior of this module, let's take the example of an expense accrual. When you click on the button *Re-Generate Lines* of an *Expense Accrual*:
+The calculation is done on purchase/order lines with a difference between
+the quantity received/send and the quantity invoiced.
 
-1. Odoo will look for all incoming picking in Done state with a *Transfer Date* <= *Cut-off Date*. For performance reasons, by default, the incoming picking dated before *Cut-off Date* minus 30 days will not be taken into account (this limit is configurable via the field *Picking Analysis*). It will go to the stock moves of those pickings and see if they are linked to a purchase order line.
-2. Once this analysis is completed, Odoo has a list of purchase order lines to analyse for potential expense accrual.
-3. For each of these purchase order lines, Odoo will:
-
-   - scan the related stock moves in *done* state and check their transfer date,
-   - scan the related invoices lines and check their invoice date.
-
-4. If, for a particular purchase order line, the quantity of products received before the cutoff-date (or on the same day) minus the quantity of products invoiced before the cut-off date (or on the same day) is positive, Odoo will generate a cut-off line.
-
-Now, let's take the example of a prepaid expense. When you click on the button *Re-Generate Lines* of a *Prepaid Expense*:
-
-1. Odoo will look for all vendor bills dated before (or equal to) *Cut-off Date*. For performance reasons, by default, the vendor bills dated before *Cut-off Date* minus 30 days will not be taken into account (this limit is configurable via the field *Picking Analysis*). It will go to the invoice lines of those vendor bills and see if they are linked to a purchase order line.
-2. Once this analysis is completed, Odoo has a list of purchase order lines to analyse for potential prepaid expense.
-3. For each of these purchase order lines, Odoo will:
-
-   - scan the related stock moves in *done* state and check their transfer date,
-   - scan the related invoices lines and check their invoice date.
-
-4. If, for a particular purchase order line, the quantity of products invoiced before the cutoff-date (or on the same day) minus the quantity of products received before the cut-off date (or on the same day) is positive, Odoo will generate a cut-off line.
-
-This module should work well with multiple units of measure (including products purchased and invoiced in different units of measure) and in multi-currency.
+A cron job generates at each end of period cutoff entries for expenses (based
+on PO) and revenues (based on SO). This is because we cannot identify in the
+past, entries for which a cutoff must be generated. That cutoff entry store the
+quantity received and invoiced at that date. Note that the invoiced quantity is
+increased as soon as a draft invoice is created. We consider that the invoice
+will be validated and the invoice accounting date will not change. If you
+modify the quantity in an invoce or create a new invoice after the cutoff has
+been generated, that cutoff will be updated when the invoice is validated. It is
+also updated when the invoice is deleted. Nevertheless, this will be forbidden
+if the accounting entry related to the cutoff is created.
 
 **Table of contents**
 
@@ -59,7 +54,47 @@ This module should work well with multiple units of measure (including products 
 Configuration
 =============
 
-For configuration instructions, refer to the README of the module *account_cutoff_base*.
+To configure this module, you need to:
+
+#. Go to the accounting settings to select the journals and accounts used for
+   the cutoff.
+#. Analytic accounting needs to be enable in Accounting - Settings.
+#. If you want to also accrue the taxes, you need in Accounting - Taxes, for
+   each type of taxes an accrued tax account.
+
+Usage
+=====
+
+To use this module, you need to:
+
+#. Go to Accounting - Cut-offs to configure and generate the accruals
+
+Examples
+========
+
+* Purchase Order with quantity received: 0, quantity invoiced: 0
+  This will not make an accrual entry
+
+* Purchase Order with quantity received: 10, quantity invoiced: 0
+  This will make an accrual entry with invoice to receive: 10
+
+* Purchase Order with quantity received: 0, quantity invoiced: 10
+  This will make an accrual entry with goods to receive: 10
+
+* Purchase Order with quantity received: 10, quantity invoiced: 0
+  This will make an accrual entry with invoice to receive: 10
+  Invoice is encoded after the cut-off date but dated before the cut-off date
+  The accrual entry is updated in the existing cut-off
+
+* Purchase Order with quantity received: 0, quantity invoiced: 0
+  This will not make an accrual entry
+  Invoice is encoded after the cut-off date but dated before the cut-off date
+  An accrual entry is added in the existing cut-off
+
+Known issues / Roadmap
+======================
+
+Although a cut-off date can be given for generating the accruals, it does not work correctly with the module as it is, and the calculation is done on the current date only. To workaround this issue, cron jobs generate the cutoff entries at end of period
 
 Bug Tracker
 ===========
@@ -77,12 +112,16 @@ Credits
 Authors
 ~~~~~~~
 
+* BCIM
 * Akretion
 
 Contributors
 ~~~~~~~~~~~~
 
-* Alexis de Lattre <alexis.delattre@akretion.com>
+* Alexis de Lattre (Akretion) <alexis.delattre@akretion.com>
+* Jacques-Etienne Baudoux (BCIM sprl) <je@bcim.be>
+* Thierry Ducrest <thierry.ducrest@camptocamp.com>
+* Souheil Bejaoui <souheil.bejaoui@acsone.eu>
 
 Maintainers
 ~~~~~~~~~~~
@@ -96,14 +135,6 @@ This module is maintained by the OCA.
 OCA, or the Odoo Community Association, is a nonprofit organization whose
 mission is to support the collaborative development of Odoo features and
 promote its widespread use.
-
-.. |maintainer-alexis-via| image:: https://github.com/alexis-via.png?size=40px
-    :target: https://github.com/alexis-via
-    :alt: alexis-via
-
-Current `maintainer <https://odoo-community.org/page/maintainer-role>`__:
-
-|maintainer-alexis-via| 
 
 This module is part of the `OCA/account-closing <https://github.com/OCA/account-closing/tree/16.0/account_cutoff_picking>`_ project on GitHub.
 
