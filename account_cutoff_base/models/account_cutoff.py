@@ -123,7 +123,7 @@ class AccountCutoff(models.Model):
     cutoff_account_id = fields.Many2one(
         comodel_name="account.account",
         string="Cut-off Account",
-        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
+        domain="[('deprecated', '=', False)]",
         states={"done": [("readonly", True)]},
         default=lambda self: self._default_cutoff_account_id(),
         check_company=True,
