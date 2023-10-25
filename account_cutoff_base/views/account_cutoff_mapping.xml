@@ -18,7 +18,6 @@
                     options="{'no_create': True}"
                     groups="base.group_multi_company"
                 />
-                <field name="company_id" invisible="1" />
             </form>
         </field>
     </record>
@@ -36,7 +35,6 @@
                     options="{'no_create': True}"
                     optional="show"
                 />
-                <field name="company_id" invisible="1" />
             </tree>
         </field>
     </record>
