@@ -43,14 +43,19 @@ class SaleOrderLine(models.Model):
         # The quantity delivered on the SO line must be deducted from all
         # moves done after the cutoff date.
         cutoff_nextday = cutoff._nextday_start_dt()
-        moves_after = self.order_id.procurement_group_id.stock_move_ids.filtered(
-            lambda r: r.state == "done" and r.date >= cutoff_nextday
-        )
+        moves_after = self.order_id.procurement_group_id.stock_move_ids
         for move in moves_after:
+            if move.state != "done":
+                continue
+            if move.date < cutoff_nextday:
+                continue
+            if move.picking_code not in ("incoming" or "outgoing"):
+                continue
+            sign = 1 if move.picking_code == "outgoing" else -1
             if move.product_uom != self.product_uom:
-                delivered_qty -= move.product_uom._compute_quantity(
+                delivered_qty -= sign * move.product_uom._compute_quantity(
                     move.product_uom_qty, self.product_uom
                 )
             else:
-                delivered_qty -= move.product_uom_qty
+                delivered_qty -= sign * move.product_uom_qty
         return delivered_qty
