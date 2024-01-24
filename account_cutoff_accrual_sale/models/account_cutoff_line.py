@@ -24,3 +24,17 @@ class AccountCutoffLine(models.Model):
                 rec.invoice_line_ids = rec.sale_line_id.invoice_lines
         super()._compute_invoice_lines()
         return
+
+    @api.depends("invoiced_qty", "received_qty")
+    def _compute_quantity(self):
+        on_order = self.filtered(
+            lambda rec: rec.parent_id.order_line_model
+            and rec.sale_line_id
+            and rec.product_id.invoice_policy == "order"
+        )
+        for rec in on_order:
+            rec.quantity = rec.sale_line_id.product_uom_qty - rec.invoiced_qty
+        other = self - on_order
+        if other:
+            super(AccountCutoffLine, other)._compute_quantity()
+        return
