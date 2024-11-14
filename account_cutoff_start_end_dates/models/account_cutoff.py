@@ -180,6 +180,7 @@ class AccountCutoff(models.Model):
             ("display_type", "=", "product"),
             ("company_id", "=", self.company_id.id),
             ("balance", "!=", 0),
+            ("cutoff_line_ids", "=", False),
         ]
         if self.source_move_state == "posted":
             domain.append(("parent_state", "=", "posted"))
