@@ -87,6 +87,27 @@ class AccountCutoff(models.Model):
             _logger.debug("Prepare cutoff lines - next chunk")
         return res
 
+    def _get_merge_keys(self):
+        res = super()._get_merge_keys()
+        res += ["product_id"]
+        return res
+
+    def _prepare_provision_line(self, cutoff_line):
+        vals = super()._prepare_provision_line(cutoff_line)
+        if cutoff_line.product_id:
+            vals["product_id"] = cutoff_line.product_id.id
+        return vals
+
+    def _prepare_move(self, to_provision):
+        vals = super()._prepare_move(to_provision)
+        # set move as income or expense to be compatible with product_analytic
+        if not vals.get("move_type"):
+            if self.cutoff_type in "accrued_revenue":
+                vals["move_type"] = "out_receipt"
+            elif self.cutoff_type in "accrued_expense":
+                vals["move_type"] = "in_receipt"
+        return vals
+
     @api.model
     def _cron_cutoff(self, cutoff_type, model):
         # Cron is expected to run at begin of new period. We need the last day
