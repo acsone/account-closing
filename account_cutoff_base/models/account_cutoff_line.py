@@ -2,7 +2,9 @@
 # @author: Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import _, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+from odoo.tools import str2bool
 
 
 class AccountCutoffLine(models.Model):
@@ -85,10 +87,53 @@ class AccountCutoffLine(models.Model):
     )
     notes = fields.Text()
 
-    _sql_constraints = [
-        (
-            "line_date_type_company_uniq",
-            "unique(cutoff_date, company_id, cutoff_type, origin_move_line_id)",
-            _("A cutoff line of the same type already exists with this cut-off date !"),
+    def _is_check_cutoff_date_on_lines_enabled(self):
+        return str2bool(
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param("account_cutoff_base.check_cutoff_date_on_lines_enabled")
         )
-    ]
+
+    @api.constrains("cutoff_date", "company_id", "cutoff_type", "origin_move_line_id")
+    def _check_unique_cutoff_date_on_lines(self):
+        check_cutoff_date_on_lines_enabled = (
+            self._is_check_cutoff_date_on_lines_enabled()
+        )
+        if check_cutoff_date_on_lines_enabled:
+            read_group = self.env["account.cutoff.line"].read_group(
+                domain=[("id", "in", self.ids), ("origin_move_line_id", "!=", False)],
+                fields=[
+                    "cutoff_date",
+                    "company_id",
+                    "cutoff_type",
+                    "origin_move_line_id",
+                ],
+                groupby=[
+                    "cutoff_date",
+                    "company_id",
+                    "cutoff_type",
+                    "origin_move_line_id",
+                ],
+                lazy=False,
+            )
+
+            if any(r["__count"] > 1 for r in read_group):
+                raise UserError(
+                    _(
+                        "A cutoff line of the same type already exists with this cut-off date !"
+                    )
+                )
+        else:
+            read_group = self.env["account.cutoff"].read_group(
+                domain=[("id", "in", self.mapped("origin_move_line_id").ids)],
+                fields=["cutoff_date", "company_id", "cutoff_type"],
+                groupby=["cutoff_date", "company_id", "cutoff_type"],
+                lazy=False,
+            )
+
+            if any(r["__count"] > 1 for r in read_group):
+                raise UserError(
+                    _(
+                        "A cutoff of the same type already exists with this cut-off date !"
+                    )
+                )
