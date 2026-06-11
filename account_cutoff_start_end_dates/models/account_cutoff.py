@@ -2,7 +2,7 @@
 # @author: Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import Command, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.fields import Domain
 
@@ -35,17 +35,15 @@ class AccountCutoff(models.Model):
             "prepaid_expense": "purchase",
         }
         for rec in self:
-            source_journal_ids = []
+            source_journal_ids = self.env["account.journal"]
             if rec.cutoff_type in mapping:
-                source_journal_ids = list(
-                    self.env["account.journal"]._search(
-                        [
-                            ("type", "=", mapping[rec.cutoff_type]),
-                            ("company_id", "=", rec.company_id.id),
-                        ]
-                    )
+                source_journal_ids = self.env["account.journal"].search(
+                    [
+                        ("type", "=", mapping[rec.cutoff_type]),
+                        ("company_id", "=", rec.company_id.id),
+                    ]
                 )
-            rec.source_journal_ids = [Command.set(source_journal_ids)]
+            rec.source_journal_ids = source_journal_ids
 
     @api.constrains("start_date", "end_date", "state")
     def _check_start_end_dates(self):
